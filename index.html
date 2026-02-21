@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Paste & Run Renderer</title>
+<title>Centered True Render</title>
 <style>
   html, body {
     margin: 0;
     height: 100%;
     background: #111;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    font-family: monospace;
     display: flex;
     flex-direction: column;
   }
@@ -37,14 +37,13 @@
     color: #aaa;
     font-size: 12px;
     margin-left: auto;
-    user-select: none;
   }
 
   #preview {
     flex: 1;
     width: 100%;
-    border: 1px solid #333; /* visible bounds */
-    background: #ececec;    /* fallback while loading */
+    border: 1px solid #333;
+    background: #ececec;
     display: block;
   }
 
@@ -70,105 +69,49 @@ const statusEl = document.getElementById("status");
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
-/**
- * Preview shell (used for fragment pastes).
- * Enforces:
- * - soft grey background
- * - centered content (both axes)
- * - stable stacking context (negative z-index more reliable)
- * - scroll if content is bigger than viewport
- */
+/* 
+  This wrapper:
+  - centers content using absolute positioning
+  - DOES NOT scale
+  - DOES NOT constrain width
+  - preserves true intrinsic size
+*/
 function previewShell(innerHtml) {
   return `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   html, body {
-    margin: 0 !important;
-    min-height: 100vh !important;
-    overflow: auto !important;
-    background: #ececec !important;
+    margin: 0;
+    background: #ececec;
+    overflow: auto;
   }
 
-  /* Center whatever gets pasted */
-  #__stage {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    isolation: isolate; /* helps with z-index:-1 staying inside */
-    position: relative;
-  }
-
-  /* Don’t let a huge single element break the viewport */
-  #__stage > * {
-    max-width: 100%;
+  #__center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
   }
 </style>
 </head>
 <body>
-  <div id="__stage">${innerHtml}</div>
+  <div id="__center">
+    ${innerHtml}
+  </div>
 </body>
 </html>`;
 }
 
-/**
- * If user pastes a full HTML doc, we still try to:
- * - set body isolation
- * - make html/body backgrounds transparent so negatives don't disappear behind paint
- * - wrap body contents in a centered stage
- *
- * If they set aggressive body styles, they can still override (normal web behavior).
- */
 function wrapUserCode(userCode) {
   const raw = String(userCode || "");
-
-  const injection = `
-<style>
-  html, body {
-    background: transparent !important;
-  }
-  body {
-    margin: 0 !important;
-    min-height: 100vh !important;
-    overflow: auto !important;
-    isolation: isolate !important;
-  }
-  #__stage {
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    isolation: isolate;
-    background: #ececec;
-  }
-  #__stage > * { max-width: 100%; }
-</style>`.trim();
-
   const hasHtml = /<html[\s>]/i.test(raw);
-  const hasHead = /<head[\s>]/i.test(raw);
-  const hasBody = /<body[\s>]/i.test(raw);
 
-  if (hasHtml) {
-    let out = raw;
+  // If full HTML document pasted, render as-is (no size modification)
+  if (hasHtml) return raw;
 
-    // Inject styles into <head> (or create one)
-    if (hasHead) out = out.replace(/<head([\s>])/i, `<head$1${injection}\n`);
-    else out = out.replace(/<html([\s>])/i, `<html$1\n<head>${injection}</head>\n`);
-
-    // Wrap body content in centered stage (best effort)
-    if (hasBody) {
-      out = out.replace(/<body([^>]*)>/i, `<body$1><div id="__stage">`);
-      out = out.replace(/<\/body>/i, `</div></body>`);
-    }
-
-    return out;
-  }
-
-  // Fragment mode: safest and most consistent
+  // Otherwise treat as fragment and center it
   return previewShell(raw);
 }
 
@@ -183,16 +126,16 @@ async function pasteCode() {
     const text = await navigator.clipboard.readText();
     codeEl.value = text;
     setStatus(`Pasted (${text.length} chars)`);
-    runCode(); // auto-run so you instantly see it
+    runCode();
   } catch {
     setStatus("Paste blocked");
-    alert("Clipboard access denied by browser.");
+    alert("Clipboard access denied.");
   }
 }
 
 function clearCode() {
   codeEl.value = "";
-  preview.srcdoc = wrapUserCode("");
+  preview.srcdoc = previewShell("");
   setStatus("Cleared");
 }
 
@@ -200,8 +143,7 @@ document.getElementById("pasteBtn").addEventListener("click", pasteCode);
 document.getElementById("runBtn").addEventListener("click", runCode);
 document.getElementById("clearBtn").addEventListener("click", clearCode);
 
-// Start with a centered blank stage
-preview.srcdoc = wrapUserCode("");
+preview.srcdoc = previewShell("");
 </script>
 
 </body>
