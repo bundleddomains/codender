@@ -1,149 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Centered True Render</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview</title>
 <style>
   html, body {
-    margin: 0;
-    height: 100%;
-    background: #111;
-    font-family: monospace;
-    display: flex;
-    flex-direction: column;
+    margin:0;
+    height:100%;
+    background:#111;
+    display:flex;
+    flex-direction:column;
   }
 
-  #controls {
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 6px 10px;
-    background: #1a1a1a;
-    box-sizing: border-box;
+  #bar {
+    height:44px;
+    display:flex;
+    gap:8px;
+    align-items:center;
+    padding:6px;
+    background:#1a1a1a;
+    box-sizing:border-box;
   }
 
   button {
-    background: #222;
-    color: #fff;
-    border: 1px solid #333;
-    padding: 8px 12px;
-    cursor: pointer;
-  }
-  button:hover { background: #2c2c2c; }
-
-  #status {
-    color: #aaa;
-    font-size: 12px;
-    margin-left: auto;
+    background:#222;
+    color:#fff;
+    border:1px solid #333;
+    padding:8px 12px;
+    cursor:pointer;
   }
 
-  #preview {
-    flex: 1;
-    width: 100%;
-    border: 1px solid #333;
-    background: #ececec;
-    display: block;
+  /* Center the preview area itself */
+  #wrap {
+    flex:1;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    overflow:auto;
   }
 
-  textarea { position: absolute; left: -9999px; }
+  iframe {
+    border:1px solid #333;
+    background:#ececec;
+    width:90%;
+    height:90%;
+  }
+
+  textarea { position:absolute; left:-9999px; }
 </style>
 </head>
 <body>
 
-<div id="controls">
-  <button id="pasteBtn">Paste</button>
-  <button id="runBtn">Run</button>
-  <button id="clearBtn">Clear</button>
-  <div id="status">Empty</div>
+<div id="bar">
+  <button id="paste">Paste</button>
+  <button id="run">Run</button>
+  <button id="clear">Clear</button>
+  <button id="kill">Kill</button>
 </div>
 
-<iframe id="preview" sandbox="allow-scripts" scrolling="yes"></iframe>
+<div id="wrap">
+  <iframe id="pv" sandbox="allow-scripts" scrolling="yes"></iframe>
+</div>
+
 <textarea id="code"></textarea>
 
 <script>
 const codeEl = document.getElementById("code");
-const preview = document.getElementById("preview");
-const statusEl = document.getElementById("status");
+const wrap = document.getElementById("wrap");
 
-function setStatus(msg) { statusEl.textContent = msg; }
+function iframe() { return document.getElementById("pv"); }
 
-/* 
-  This wrapper:
-  - centers content using absolute positioning
-  - DOES NOT scale
-  - DOES NOT constrain width
-  - preserves true intrinsic size
-*/
-function previewShell(innerHtml) {
-  return `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  html, body {
-    margin: 0;
-    background: #ececec;
-    overflow: auto;
-  }
-
-  #__center {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-</style>
-</head>
-<body>
-  <div id="__center">
-    ${innerHtml}
-  </div>
-</body>
-</html>`;
+function run() {
+  iframe().srcdoc = codeEl.value;
 }
 
-function wrapUserCode(userCode) {
-  const raw = String(userCode || "");
-  const hasHtml = /<html[\s>]/i.test(raw);
-
-  // If full HTML document pasted, render as-is (no size modification)
-  if (hasHtml) return raw;
-
-  // Otherwise treat as fragment and center it
-  return previewShell(raw);
+async function paste() {
+  const text = await navigator.clipboard.readText();
+  codeEl.value = text;
+  run();
 }
 
-function runCode() {
-  const raw = codeEl.value;
-  preview.srcdoc = wrapUserCode(raw);
-  setStatus(raw.trim() ? `Rendered (${raw.length} chars)` : "Empty");
-}
-
-async function pasteCode() {
-  try {
-    const text = await navigator.clipboard.readText();
-    codeEl.value = text;
-    setStatus(`Pasted (${text.length} chars)`);
-    runCode();
-  } catch {
-    setStatus("Paste blocked");
-    alert("Clipboard access denied.");
-  }
-}
-
-function clearCode() {
+function clearAll() {
   codeEl.value = "";
-  preview.srcdoc = previewShell("");
-  setStatus("Cleared");
+  iframe().srcdoc = "";
 }
 
-document.getElementById("pasteBtn").addEventListener("click", pasteCode);
-document.getElementById("runBtn").addEventListener("click", runCode);
-document.getElementById("clearBtn").addEventListener("click", clearCode);
+function kill() {
+  const old = iframe();
+  const fresh = document.createElement("iframe");
+  fresh.id = "pv";
+  fresh.setAttribute("sandbox","allow-scripts");
+  fresh.setAttribute("scrolling","yes");
+  fresh.style.width="90%";
+  fresh.style.height="90%";
+  fresh.style.border="1px solid #333";
+  fresh.style.background="#ececec";
+  old.replaceWith(fresh);
+}
 
-preview.srcdoc = previewShell("");
+document.getElementById("paste").onclick = () => paste().catch(()=>alert("Paste blocked"));
+document.getElementById("run").onclick = run;
+document.getElementById("clear").onclick = clearAll;
+document.getElementById("kill").onclick = kill;
 </script>
 
 </body>
