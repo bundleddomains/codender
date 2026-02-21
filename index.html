@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>Minimal Render</title>
+<title>Safe-ish Renderer</title>
 <style>
   html, body {
     margin: 0;
@@ -39,7 +39,6 @@
     user-select: none;
   }
 
-  /* Fill remaining space */
   #preview {
     flex: 1;
     width: 100%;
@@ -56,7 +55,6 @@
 <div id="controls">
   <button id="pasteBtn">Paste</button>
   <button id="runBtn">Run</button>
-  <button id="popBtn">Popout</button>
   <button id="clearBtn">Clear</button>
   <div id="status">Empty</div>
 </div>
@@ -71,70 +69,105 @@ const statusEl = document.getElementById("status");
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
-function wrapForPreview(userCode) {
-  const raw = String(userCode || "");
-
-  // Force non-blinding grey + allow scrolling by default (prevents "only a piece")
-  const injected = `
+// Hardened preview shell:
+// - grey page background (non-blinding)
+// - transparent html/body so negative z-index doesn't vanish behind body paint
+// - #__root creates a stacking context with isolation so z-index:-1 stays "inside"
+function previewShell(innerHtml) {
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
+  /* page surface */
+  :root { color-scheme: light; }
+  body { background: #ececec; }
+
+  /* prevent body paint from "eating" negative z-index layers in weird cases */
   html, body {
     margin: 0 !important;
-    background: #ececec !important;
-    overflow: auto !important;  /* <-- key */
+    min-height: 100vh !important;
+    overflow: auto !important;
+    background: transparent !important;
   }
+
+  /* stable stacking context container */
+  #__root {
+    position: relative;
+    min-height: 100vh;
+    background: #ececec;
+    isolation: isolate;     /* key for negative z-index reliability */
+  }
+</style>
+</head>
+<body>
+  <div id="__root">${innerHtml}</div>
+</body>
+</html>`;
+}
+
+function wrapUserCode(userCode) {
+  const raw = String(userCode || "");
+
+  // If they pasted a full document, we *still* try to inject a root isolation layer.
+  // We do that by adding `isolation:isolate` to body and forcing background logic.
+  const injection = `
+<style>
+  body { isolation: isolate !important; }
+  html, body { background: transparent !important; }
 </style>`.trim();
 
   const hasHtml = /<html[\s>]/i.test(raw);
   const hasHead = /<head[\s>]/i.test(raw);
+  const hasBody = /<body[\s>]/i.test(raw);
 
   if (hasHtml) {
-    if (hasHead) return raw.replace(/<head([\s>])/i, `<head$1${injected}\n`);
-    return raw.replace(/<html([\s>])/i, `<html$1\n<head>${injected}</head>\n`);
+    let out = raw;
+    if (hasHead) out = out.replace(/<head([\s>])/i, `<head$1${injection}\n`);
+    else out = out.replace(/<html([\s>])/i, `<html$1\n<head>${injection}</head>\n`);
+
+    // If they have a body, wrap body contents in a root div with isolation.
+    if (hasBody) {
+      out = out.replace(/<body([^>]*)>/i, `<body$1><div id="__root" style="min-height:100vh;background:#ececec;isolation:isolate;position:relative;">`);
+      out = out.replace(/<\/body>/i, `</div></body>`);
+    }
+    return out;
   }
 
-  // Fragment -> full doc
-  return `<!doctype html><html><head><meta charset="utf-8">${injected}</head><body>${raw}</body></html>`;
+  // Fragment mode (most common): safest path
+  return previewShell(raw);
 }
 
 function runCode() {
   const raw = codeEl.value;
-  preview.srcdoc = wrapForPreview(raw);
-  setStatus(raw.trim() ? `Rendered (${raw.length} chars)` : "Empty");
+  preview.srcdoc = wrapUserCode(raw);
+  statusEl.textContent = raw.trim() ? `Rendered (${raw.length} chars)` : "Empty";
 }
 
 async function pasteCode() {
   try {
     const text = await navigator.clipboard.readText();
     codeEl.value = text;
-    setStatus(`Pasted (${text.length} chars)`);
-    runCode(); // auto-run
+    statusEl.textContent = `Pasted (${text.length} chars)`;
+    runCode();
   } catch {
-    setStatus("Paste blocked");
+    statusEl.textContent = "Paste blocked";
     alert("Clipboard access denied by browser.");
   }
 }
 
 function clearCode() {
   codeEl.value = "";
-  preview.srcdoc = wrapForPreview("");
-  setStatus("Cleared");
-}
-
-function popout() {
-  const html = wrapForPreview(codeEl.value);
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  window.open(url, "_blank", "noopener,noreferrer");
-  setStatus("Popped out");
+  preview.srcdoc = wrapUserCode("");
+  statusEl.textContent = "Cleared";
 }
 
 document.getElementById("pasteBtn").addEventListener("click", pasteCode);
 document.getElementById("runBtn").addEventListener("click", runCode);
-document.getElementById("popBtn").addEventListener("click", popout);
 document.getElementById("clearBtn").addEventListener("click", clearCode);
 
-preview.srcdoc = wrapForPreview("");
+preview.srcdoc = wrapUserCode("");
 </script>
 
 </body>
