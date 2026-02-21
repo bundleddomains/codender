@@ -2,7 +2,8 @@
 <html>
 <head>
 <meta charset="UTF-8" />
-<title>Safe-ish Renderer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Paste & Run Renderer</title>
 <style>
   html, body {
     margin: 0;
@@ -42,8 +43,8 @@
   #preview {
     flex: 1;
     width: 100%;
-    border: 1px solid #333;
-    background: #ececec;
+    border: 1px solid #333; /* visible bounds */
+    background: #ececec;    /* fallback while loading */
     display: block;
   }
 
@@ -69,10 +70,14 @@ const statusEl = document.getElementById("status");
 
 function setStatus(msg) { statusEl.textContent = msg; }
 
-// Hardened preview shell:
-// - grey page background (non-blinding)
-// - transparent html/body so negative z-index doesn't vanish behind body paint
-// - #__root creates a stacking context with isolation so z-index:-1 stays "inside"
+/**
+ * Preview shell (used for fragment pastes).
+ * Enforces:
+ * - soft grey background
+ * - centered content (both axes)
+ * - stable stacking context (negative z-index more reliable)
+ * - scroll if content is bigger than viewport
+ */
 function previewShell(innerHtml) {
   return `<!doctype html>
 <html>
@@ -80,42 +85,67 @@ function previewShell(innerHtml) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  /* page surface */
-  :root { color-scheme: light; }
-  body { background: #ececec; }
-
-  /* prevent body paint from "eating" negative z-index layers in weird cases */
   html, body {
     margin: 0 !important;
     min-height: 100vh !important;
     overflow: auto !important;
-    background: transparent !important;
+    background: #ececec !important;
   }
 
-  /* stable stacking context container */
-  #__root {
-    position: relative;
+  /* Center whatever gets pasted */
+  #__stage {
     min-height: 100vh;
-    background: #ececec;
-    isolation: isolate;     /* key for negative z-index reliability */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    isolation: isolate; /* helps with z-index:-1 staying inside */
+    position: relative;
+  }
+
+  /* Don’t let a huge single element break the viewport */
+  #__stage > * {
+    max-width: 100%;
   }
 </style>
 </head>
 <body>
-  <div id="__root">${innerHtml}</div>
+  <div id="__stage">${innerHtml}</div>
 </body>
 </html>`;
 }
 
+/**
+ * If user pastes a full HTML doc, we still try to:
+ * - set body isolation
+ * - make html/body backgrounds transparent so negatives don't disappear behind paint
+ * - wrap body contents in a centered stage
+ *
+ * If they set aggressive body styles, they can still override (normal web behavior).
+ */
 function wrapUserCode(userCode) {
   const raw = String(userCode || "");
 
-  // If they pasted a full document, we *still* try to inject a root isolation layer.
-  // We do that by adding `isolation:isolate` to body and forcing background logic.
   const injection = `
 <style>
-  body { isolation: isolate !important; }
-  html, body { background: transparent !important; }
+  html, body {
+    background: transparent !important;
+  }
+  body {
+    margin: 0 !important;
+    min-height: 100vh !important;
+    overflow: auto !important;
+    isolation: isolate !important;
+  }
+  #__stage {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    isolation: isolate;
+    background: #ececec;
+  }
+  #__stage > * { max-width: 100%; }
 </style>`.trim();
 
   const hasHtml = /<html[\s>]/i.test(raw);
@@ -124,35 +154,38 @@ function wrapUserCode(userCode) {
 
   if (hasHtml) {
     let out = raw;
+
+    // Inject styles into <head> (or create one)
     if (hasHead) out = out.replace(/<head([\s>])/i, `<head$1${injection}\n`);
     else out = out.replace(/<html([\s>])/i, `<html$1\n<head>${injection}</head>\n`);
 
-    // If they have a body, wrap body contents in a root div with isolation.
+    // Wrap body content in centered stage (best effort)
     if (hasBody) {
-      out = out.replace(/<body([^>]*)>/i, `<body$1><div id="__root" style="min-height:100vh;background:#ececec;isolation:isolate;position:relative;">`);
+      out = out.replace(/<body([^>]*)>/i, `<body$1><div id="__stage">`);
       out = out.replace(/<\/body>/i, `</div></body>`);
     }
+
     return out;
   }
 
-  // Fragment mode (most common): safest path
+  // Fragment mode: safest and most consistent
   return previewShell(raw);
 }
 
 function runCode() {
   const raw = codeEl.value;
   preview.srcdoc = wrapUserCode(raw);
-  statusEl.textContent = raw.trim() ? `Rendered (${raw.length} chars)` : "Empty";
+  setStatus(raw.trim() ? `Rendered (${raw.length} chars)` : "Empty");
 }
 
 async function pasteCode() {
   try {
     const text = await navigator.clipboard.readText();
     codeEl.value = text;
-    statusEl.textContent = `Pasted (${text.length} chars)`;
-    runCode();
+    setStatus(`Pasted (${text.length} chars)`);
+    runCode(); // auto-run so you instantly see it
   } catch {
-    statusEl.textContent = "Paste blocked";
+    setStatus("Paste blocked");
     alert("Clipboard access denied by browser.");
   }
 }
@@ -160,13 +193,14 @@ async function pasteCode() {
 function clearCode() {
   codeEl.value = "";
   preview.srcdoc = wrapUserCode("");
-  statusEl.textContent = "Cleared";
+  setStatus("Cleared");
 }
 
 document.getElementById("pasteBtn").addEventListener("click", pasteCode);
 document.getElementById("runBtn").addEventListener("click", runCode);
 document.getElementById("clearBtn").addEventListener("click", clearCode);
 
+// Start with a centered blank stage
 preview.srcdoc = wrapUserCode("");
 </script>
 
