@@ -2,12 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Framed Renderer</title>
+<title>Minimal Render</title>
 <style>
   html, body {
     margin: 0;
     height: 100%;
-    background: #0b0b0b;
+    background: #111;
     font-family: monospace;
     display: flex;
     flex-direction: column;
@@ -18,46 +18,26 @@
     display: flex;
     gap: 10px;
     padding: 6px;
-    background: #111;
+    background: #1a1a1a;
   }
 
   button {
-    background: #1c1c1c;
+    background: #222;
     color: #fff;
     border: 1px solid #333;
-    padding: 6px 14px;
+    padding: 6px 12px;
     cursor: pointer;
   }
 
   button:hover {
-    background: #2a2a2a;
+    background: #2c2c2c;
   }
 
-  #previewContainer {
+  #preview {
     height: 95%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 30px;
-  }
-
-  #frame {
-    width: 90%;
-    height: 90%;
-    background: #1a1a1a; /* outer matte */
-    border: 4px solid #444;
-    box-shadow: 
-      0 0 0 2px #111,
-      0 10px 40px rgba(0,0,0,0.8);
-    padding: 12px; /* inner spacing */
-    box-sizing: border-box;
-  }
-
-  iframe {
     width: 100%;
-    height: 100%;
-    border: none;
-    background: #e6e6e6; /* soft grey preview surface */
+    border: 1px solid #333; /* just enough to see bounds */
+    background: #ececec;   /* soft grey, not blinding */
   }
 
   textarea {
@@ -74,11 +54,7 @@
   <button onclick="clearCode()">Clear</button>
 </div>
 
-<div id="previewContainer">
-  <div id="frame">
-    <iframe id="preview" sandbox="allow-scripts"></iframe>
-  </div>
-</div>
+<iframe id="preview" sandbox="allow-scripts"></iframe>
 
 <textarea id="code"></textarea>
 
@@ -87,7 +63,7 @@ async function pasteCode() {
   try {
     const text = await navigator.clipboard.readText();
     document.getElementById("code").value = text;
-  } catch (e) {
+  } catch {
     alert("Clipboard access denied.");
   }
 }
