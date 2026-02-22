@@ -31,7 +31,6 @@
     cursor:pointer;
   }
 
-  /* Center the preview area itself */
   #wrap {
     flex:1;
     display:flex;
@@ -60,19 +59,26 @@
 </div>
 
 <div id="wrap">
-  <iframe id="pv" sandbox="allow-scripts" scrolling="yes"></iframe>
+  <!-- ✅ allow-same-origin fixes localStorage/pointer behavior for your drag editor -->
+  <iframe id="pv" sandbox="allow-scripts allow-same-origin" scrolling="yes"></iframe>
 </div>
 
 <textarea id="code"></textarea>
 
 <script>
 const codeEl = document.getElementById("code");
-const wrap = document.getElementById("wrap");
 
 function iframe() { return document.getElementById("pv"); }
 
+// ✅ Tight CSP injected into every preview (blocks external scripts by default)
+const CSP = `
+<meta http-equiv="Content-Security-Policy"
+content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+`;
+
 function run() {
-  iframe().srcdoc = codeEl.value;
+  // Prepend CSP to whatever you paste/run
+  iframe().srcdoc = CSP + codeEl.value;
 }
 
 async function paste() {
@@ -90,12 +96,17 @@ function kill() {
   const old = iframe();
   const fresh = document.createElement("iframe");
   fresh.id = "pv";
-  fresh.setAttribute("sandbox","allow-scripts");
+
+  // ✅ keep same sandbox settings on the new iframe too
+  fresh.setAttribute("sandbox","allow-scripts allow-same-origin");
   fresh.setAttribute("scrolling","yes");
+
+  // keep styling consistent
   fresh.style.width="90%";
   fresh.style.height="90%";
   fresh.style.border="1px solid #333";
   fresh.style.background="#ececec";
+
   old.replaceWith(fresh);
 }
 
