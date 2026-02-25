@@ -3,50 +3,93 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Preview</title>
+<title>3D Preview Lab</title>
+
 <style>
-  html, body {
-    margin:0;
-    height:100%;
-    background:#111;
-    display:flex;
-    flex-direction:column;
-  }
+html, body {
+  margin:0;
+  height:100%;
+  background:#0f1115;
+  display:flex;
+  flex-direction:column;
+  font-family:system-ui, sans-serif;
+}
 
-  #bar {
-    height:44px;
-    display:flex;
-    gap:8px;
-    align-items:center;
-    padding:6px;
-    background:#1a1a1a;
-    box-sizing:border-box;
-  }
+/* TOP CONTROL BAR */
+#bar {
+  height:54px;
+  display:flex;
+  gap:10px;
+  align-items:center;
+  padding:8px 12px;
+  background:#161a20;
+  border-bottom:1px solid #222;
+  box-sizing:border-box;
+}
 
-  button {
-    background:#222;
-    color:#fff;
-    border:1px solid #333;
-    padding:8px 12px;
-    cursor:pointer;
-  }
+button {
+  background:#1f242b;
+  color:#fff;
+  border:1px solid #333;
+  padding:8px 12px;
+  cursor:pointer;
+}
 
-  #wrap {
-    flex:1;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    overflow:auto;
-  }
+label {
+  color:#aaa;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
 
-  iframe {
-    border:1px solid #333;
-    background:#ececec;
-    width:90%;
-    height:90%;
-  }
+input[type=range] {
+  width:120px;
+}
 
-  textarea { position:absolute; left:-9999px; }
+/* MAIN AREA */
+#wrap {
+  flex:1;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+
+/* 3D SCENE */
+.scene {
+  width:900px;
+  height:650px;
+  perspective:1400px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* 3D VIEWER BOX */
+.viewer {
+  width:80%;
+  height:80%;
+  transform-style: preserve-3d;
+  transform: rotateX(10deg) rotateY(20deg);
+  transition: transform 0.1s ease;
+  box-shadow:0 40px 80px rgba(0,0,0,0.6);
+}
+
+/* Preview box styling */
+.viewer iframe {
+  width:100%;
+  height:100%;
+  border:1px solid #333;
+  background:#ececec;
+  border-radius:8px;
+}
+
+/* Hidden paste storage */
+textarea {
+  position:absolute;
+  left:-9999px;
+}
 </style>
 </head>
 <body>
@@ -56,28 +99,44 @@
   <button id="run">Run</button>
   <button id="clear">Clear</button>
   <button id="kill">Kill</button>
+
+  <label>X
+    <input type="range" id="rotX" min="-60" max="60" value="10">
+  </label>
+
+  <label>Y
+    <input type="range" id="rotY" min="-180" max="180" value="20">
+  </label>
 </div>
 
 <div id="wrap">
-  <!-- ✅ allow-same-origin fixes localStorage/pointer behavior for your drag editor -->
-  <iframe id="pv" sandbox="allow-scripts allow-same-origin" scrolling="yes"></iframe>
+  <div class="scene">
+    <div class="viewer" id="viewer">
+      <iframe id="pv"
+        sandbox="allow-scripts allow-same-origin"
+        scrolling="yes">
+      </iframe>
+    </div>
+  </div>
 </div>
 
 <textarea id="code"></textarea>
 
 <script>
 const codeEl = document.getElementById("code");
+const viewer = document.getElementById("viewer");
+const rotX = document.getElementById("rotX");
+const rotY = document.getElementById("rotY");
 
 function iframe() { return document.getElementById("pv"); }
 
-// ✅ Tight CSP injected into every preview (blocks external scripts by default)
+/* CSP injected into every preview */
 const CSP = `
 <meta http-equiv="Content-Security-Policy"
 content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 `;
 
 function run() {
-  // Prepend CSP to whatever you paste/run
   iframe().srcdoc = CSP + codeEl.value;
 }
 
@@ -96,19 +155,24 @@ function kill() {
   const old = iframe();
   const fresh = document.createElement("iframe");
   fresh.id = "pv";
-
-  // ✅ keep same sandbox settings on the new iframe too
   fresh.setAttribute("sandbox","allow-scripts allow-same-origin");
   fresh.setAttribute("scrolling","yes");
-
-  // keep styling consistent
-  fresh.style.width="90%";
-  fresh.style.height="90%";
+  fresh.style.width="100%";
+  fresh.style.height="100%";
   fresh.style.border="1px solid #333";
   fresh.style.background="#ececec";
-
   old.replaceWith(fresh);
 }
+
+/* 3D rotation control */
+function updateRotation() {
+  viewer.style.transform =
+    `rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`;
+}
+
+rotX.addEventListener("input", updateRotation);
+rotY.addEventListener("input", updateRotation);
+updateRotation();
 
 document.getElementById("paste").onclick = () => paste().catch(()=>alert("Paste blocked"));
 document.getElementById("run").onclick = run;
