@@ -77,6 +77,7 @@ input[type=text] {
   justify-content:center;
 }
 
+/* This is just a positioning container now */
 .viewer {
   width:80%;
   height:80%;
@@ -85,38 +86,24 @@ input[type=text] {
   justify-content:center;
 }
 
-/* ───────── DEVICE PANEL ───────── */
-
+/* No visible device anymore */
 .panel {
   width:100%;
   height:100%;
-  background:#1c1f26;
-  border-radius:16px;
-  overflow:hidden;
-  box-shadow:
-    0 40px 80px rgba(0,0,0,0.6),
-    inset 0 0 0 1px rgba(255,255,255,0.04);
-
+  display:flex;
+  align-items:center;
+  justify-content:center;
   opacity:0;
   pointer-events:none;
   transition:opacity 0.25s ease;
 }
 
-.viewport {
-  width:92%;
-  height:92%;
-  margin:auto;
-  background:#000;
-  border-radius:12px;
-  overflow:hidden;
-  display:flex;
-}
-
-.viewport iframe {
+/* Iframe now floats directly */
+.panel iframe {
+  border:none;
+  background:transparent;
   width:100%;
   height:100%;
-  border:none;
-  background:#ffffff;
 }
 
 textarea {
@@ -150,12 +137,10 @@ textarea {
   <div class="scene">
     <div class="viewer">
       <div class="panel" id="panel">
-        <div class="viewport">
-          <iframe id="pv"
-            sandbox="allow-scripts allow-same-origin"
-            scrolling="yes">
-          </iframe>
-        </div>
+        <iframe id="pv"
+          sandbox="allow-scripts allow-same-origin"
+          scrolling="yes">
+        </iframe>
       </div>
     </div>
   </div>
@@ -186,11 +171,13 @@ function run() {
     html, body {
       margin:0;
       height:100%;
+      background: transparent !important;
+      display:flex;
+      align-items:center;
+      justify-content:center;
     }
 
     #__rotor__ {
-      width:100%;
-      height:100%;
       transform-style: preserve-3d;
       transform-origin:center center;
       transition: transform 0.1s ease;
@@ -243,11 +230,11 @@ function kill() {
   fresh.style.width="100%";
   fresh.style.height="100%";
   fresh.style.border="none";
-  fresh.style.background="#fff";
+  fresh.style.background="transparent";
   old.replaceWith(fresh);
 }
 
-/* Rotation now targets iframe content */
+/* Rotation targets iframe content only */
 function updateRotation() {
   iframe().contentWindow?.postMessage({
     type: "rotate",
@@ -259,7 +246,7 @@ function updateRotation() {
 rotX.addEventListener("input", updateRotation);
 rotY.addEventListener("input", updateRotation);
 
-/* Background Control */
+/* Lab Background Control */
 function updateBG() {
   document.documentElement.style
     .setProperty("--lab-bg", bgInput.value);
