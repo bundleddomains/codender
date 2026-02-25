@@ -6,16 +6,20 @@
 <title>3D Preview Lab</title>
 
 <style>
+:root {
+  --lab-bg:#0e1116;
+}
+
 html, body {
   margin:0;
   height:100%;
-  background:#0e1116;
+  background:var(--lab-bg);
   display:flex;
   flex-direction:column;
   font-family:system-ui, sans-serif;
 }
 
-/* ───────────── TOP CONTROL BAR ───────────── */
+/* ───────── TOP BAR ───────── */
 
 #bar {
   height:56px;
@@ -53,7 +57,15 @@ input[type=range] {
   width:120px;
 }
 
-/* ───────────── MAIN AREA ───────────── */
+input[type=text] {
+  width:90px;
+  background:#1f2630;
+  border:1px solid #2d3642;
+  color:#fff;
+  padding:4px 6px;
+}
+
+/* ───────── MAIN AREA ───────── */
 
 #wrap {
   flex:1;
@@ -63,7 +75,7 @@ input[type=range] {
   overflow:hidden;
 }
 
-/* ───────────── 3D SCENE ───────────── */
+/* ───────── 3D SCENE ───────── */
 
 .scene {
   width:900px;
@@ -74,20 +86,21 @@ input[type=range] {
   justify-content:center;
 }
 
-/* ───────────── 3D VIEWER ───────────── */
+/* ───────── VIEWER ───────── */
 
 .viewer {
   width:80%;
   height:80%;
   transform-style: preserve-3d;
-  transform: rotateX(10deg) rotateY(20deg);
+  transform:none; /* no tilt on load */
   transition: transform 0.1s ease;
   display:flex;
   align-items:center;
   justify-content:center;
 }
 
-/* Physical inspection tablet */
+/* ───────── INSPECTION PANEL ───────── */
+
 .panel {
   width:100%;
   height:100%;
@@ -98,22 +111,22 @@ input[type=range] {
     0 40px 80px rgba(0,0,0,0.6),
     inset 0 0 0 1px rgba(255,255,255,0.04);
 
-  /* Critical: isolate preview from 3D stacking */
-  transform-style: flat;
+  /* idle hidden */
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.25s ease;
+
+  transform-style:flat;
 }
 
-/* Preview content */
 .panel iframe {
   width:100%;
   height:100%;
   border:none;
   background:#ececec;
-
-  /* Prevent depth stacking bleed */
-  transform: translateZ(0);
+  transform:translateZ(0);
 }
 
-/* Hidden paste buffer */
 textarea {
   position:absolute;
   left:-9999px;
@@ -129,18 +142,22 @@ textarea {
   <button id="kill">Kill</button>
 
   <label>X
-    <input type="range" id="rotX" min="-60" max="60" value="10">
+    <input type="range" id="rotX" min="-60" max="60" value="0">
   </label>
 
   <label>Y
-    <input type="range" id="rotY" min="-180" max="180" value="20">
+    <input type="range" id="rotY" min="-180" max="180" value="0">
+  </label>
+
+  <label>BGC
+    <input type="text" id="bgInput" value="#0e1116">
   </label>
 </div>
 
 <div id="wrap">
   <div class="scene">
     <div class="viewer" id="viewer">
-      <div class="panel">
+      <div class="panel" id="panel">
         <iframe id="pv"
           sandbox="allow-scripts allow-same-origin"
           scrolling="yes">
@@ -155,12 +172,14 @@ textarea {
 <script>
 const codeEl = document.getElementById("code");
 const viewer = document.getElementById("viewer");
+const panel = document.getElementById("panel");
 const rotX = document.getElementById("rotX");
 const rotY = document.getElementById("rotY");
+const bgInput = document.getElementById("bgInput");
 
 function iframe() { return document.getElementById("pv"); }
 
-/* Tight CSP injected into every preview */
+/* Tight CSP */
 const CSP = `
 <meta http-equiv="Content-Security-Policy"
 content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
@@ -168,6 +187,8 @@ content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; sc
 
 function run() {
   iframe().srcdoc = CSP + codeEl.value;
+  panel.style.opacity = "1";
+  panel.style.pointerEvents = "auto";
 }
 
 async function paste() {
@@ -179,6 +200,11 @@ async function paste() {
 function clearAll() {
   codeEl.value = "";
   iframe().srcdoc = "";
+  panel.style.opacity = "0";
+  panel.style.pointerEvents = "none";
+  viewer.style.transform = "none";
+  rotX.value = 0;
+  rotY.value = 0;
 }
 
 function kill() {
@@ -194,7 +220,7 @@ function kill() {
   old.replaceWith(fresh);
 }
 
-/* 3D rotation control */
+/* Rotation */
 function updateRotation() {
   viewer.style.transform =
     `rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`;
@@ -202,10 +228,19 @@ function updateRotation() {
 
 rotX.addEventListener("input", updateRotation);
 rotY.addEventListener("input", updateRotation);
-updateRotation();
 
-document.getElementById("paste").onclick = () =>
-  paste().catch(()=>alert("Paste blocked"));
+/* Background Control */
+function updateBG() {
+  document.documentElement.style
+    .setProperty("--lab-bg", bgInput.value);
+}
+
+bgInput.addEventListener("input", updateBG);
+updateBG();
+
+/* Buttons */
+document.getElementById("paste").onclick =
+  () => paste().catch(()=>alert("Paste blocked"));
 
 document.getElementById("run").onclick = run;
 document.getElementById("clear").onclick = clearAll;
