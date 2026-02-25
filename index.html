@@ -9,30 +9,36 @@
 html, body {
   margin:0;
   height:100%;
-  background:#0f1115;
+  background:#0e1116;
   display:flex;
   flex-direction:column;
   font-family:system-ui, sans-serif;
 }
 
-/* TOP CONTROL BAR */
+/* ───────────── TOP CONTROL BAR ───────────── */
+
 #bar {
-  height:54px;
+  height:56px;
   display:flex;
   gap:10px;
   align-items:center;
-  padding:8px 12px;
-  background:#161a20;
+  padding:8px 14px;
+  background:#151922;
   border-bottom:1px solid #222;
   box-sizing:border-box;
 }
 
 button {
-  background:#1f242b;
+  background:#1f2630;
   color:#fff;
-  border:1px solid #333;
-  padding:8px 12px;
+  border:1px solid #2d3642;
+  padding:8px 14px;
   cursor:pointer;
+  transition:0.15s ease;
+}
+
+button:hover {
+  background:#273140;
 }
 
 label {
@@ -47,7 +53,8 @@ input[type=range] {
   width:120px;
 }
 
-/* MAIN AREA */
+/* ───────────── MAIN AREA ───────────── */
+
 #wrap {
   flex:1;
   display:flex;
@@ -56,7 +63,8 @@ input[type=range] {
   overflow:hidden;
 }
 
-/* 3D SCENE */
+/* ───────────── 3D SCENE ───────────── */
+
 .scene {
   width:900px;
   height:650px;
@@ -66,26 +74,46 @@ input[type=range] {
   justify-content:center;
 }
 
-/* 3D VIEWER BOX */
+/* ───────────── 3D VIEWER ───────────── */
+
 .viewer {
   width:80%;
   height:80%;
   transform-style: preserve-3d;
   transform: rotateX(10deg) rotateY(20deg);
   transition: transform 0.1s ease;
-  box-shadow:0 40px 80px rgba(0,0,0,0.6);
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-/* Preview box styling */
-.viewer iframe {
+/* Physical inspection tablet */
+.panel {
   width:100%;
   height:100%;
-  border:1px solid #333;
-  background:#ececec;
-  border-radius:8px;
+  background:#1c1f26;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:
+    0 40px 80px rgba(0,0,0,0.6),
+    inset 0 0 0 1px rgba(255,255,255,0.04);
+
+  /* Critical: isolate preview from 3D stacking */
+  transform-style: flat;
 }
 
-/* Hidden paste storage */
+/* Preview content */
+.panel iframe {
+  width:100%;
+  height:100%;
+  border:none;
+  background:#ececec;
+
+  /* Prevent depth stacking bleed */
+  transform: translateZ(0);
+}
+
+/* Hidden paste buffer */
 textarea {
   position:absolute;
   left:-9999px;
@@ -112,10 +140,12 @@ textarea {
 <div id="wrap">
   <div class="scene">
     <div class="viewer" id="viewer">
-      <iframe id="pv"
-        sandbox="allow-scripts allow-same-origin"
-        scrolling="yes">
-      </iframe>
+      <div class="panel">
+        <iframe id="pv"
+          sandbox="allow-scripts allow-same-origin"
+          scrolling="yes">
+        </iframe>
+      </div>
     </div>
   </div>
 </div>
@@ -130,7 +160,7 @@ const rotY = document.getElementById("rotY");
 
 function iframe() { return document.getElementById("pv"); }
 
-/* CSP injected into every preview */
+/* Tight CSP injected into every preview */
 const CSP = `
 <meta http-equiv="Content-Security-Policy"
 content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
@@ -159,7 +189,7 @@ function kill() {
   fresh.setAttribute("scrolling","yes");
   fresh.style.width="100%";
   fresh.style.height="100%";
-  fresh.style.border="1px solid #333";
+  fresh.style.border="none";
   fresh.style.background="#ececec";
   old.replaceWith(fresh);
 }
@@ -174,7 +204,9 @@ rotX.addEventListener("input", updateRotation);
 rotY.addEventListener("input", updateRotation);
 updateRotation();
 
-document.getElementById("paste").onclick = () => paste().catch(()=>alert("Paste blocked"));
+document.getElementById("paste").onclick = () =>
+  paste().catch(()=>alert("Paste blocked"));
+
 document.getElementById("run").onclick = run;
 document.getElementById("clear").onclick = clearAll;
 document.getElementById("kill").onclick = kill;
