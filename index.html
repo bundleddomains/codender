@@ -38,11 +38,6 @@ button {
   border:1px solid #2d3642;
   padding:8px 14px;
   cursor:pointer;
-  transition:0.15s ease;
-}
-
-button:hover {
-  background:#273140;
 }
 
 label {
@@ -73,8 +68,6 @@ input[type=text] {
   overflow:hidden;
 }
 
-/* ───────── 3D SCENE ───────── */
-
 .scene {
   width:900px;
   height:650px;
@@ -84,8 +77,6 @@ input[type=text] {
   justify-content:center;
 }
 
-/* ───────── STATIC VIEWER (no rotation here) ───────── */
-
 .viewer {
   width:80%;
   height:80%;
@@ -94,20 +85,7 @@ input[type=text] {
   justify-content:center;
 }
 
-/* ───────── ROTATION LAYER ───────── */
-
-.rotor {
-  width:100%;
-  height:100%;
-  transform-style: preserve-3d;
-  transform:none;
-  transition: transform 0.1s ease;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-/* ───────── INSPECTION PANEL ───────── */
+/* ───────── DEVICE PANEL ───────── */
 
 .panel {
   width:100%;
@@ -123,8 +101,6 @@ input[type=text] {
   pointer-events:none;
   transition:opacity 0.25s ease;
 }
-
-/* ───────── VIEWPORT (isolates iframe content) ───────── */
 
 .viewport {
   width:92%;
@@ -173,14 +149,12 @@ textarea {
 <div id="wrap">
   <div class="scene">
     <div class="viewer">
-      <div class="rotor" id="rotor">
-        <div class="panel" id="panel">
-          <div class="viewport">
-            <iframe id="pv"
-              sandbox="allow-scripts allow-same-origin"
-              scrolling="yes">
-            </iframe>
-          </div>
+      <div class="panel" id="panel">
+        <div class="viewport">
+          <iframe id="pv"
+            sandbox="allow-scripts allow-same-origin"
+            scrolling="yes">
+          </iframe>
         </div>
       </div>
     </div>
@@ -191,7 +165,6 @@ textarea {
 
 <script>
 const codeEl = document.getElementById("code");
-const rotor = document.getElementById("rotor");
 const panel = document.getElementById("panel");
 const rotX = document.getElementById("rotX");
 const rotY = document.getElementById("rotY");
@@ -206,7 +179,42 @@ content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; sc
 `;
 
 function run() {
-  iframe().srcdoc = CSP + codeEl.value;
+
+  const wrapped = `
+  ${CSP}
+  <style>
+    html, body {
+      margin:0;
+      height:100%;
+    }
+
+    #__rotor__ {
+      width:100%;
+      height:100%;
+      transform-style: preserve-3d;
+      transform-origin:center center;
+      transition: transform 0.1s ease;
+    }
+  </style>
+
+  <div id="__rotor__">
+    ${codeEl.value}
+  </div>
+
+  <script>
+    window.addEventListener("message", (e) => {
+      if (e.data?.type === "rotate") {
+        const el = document.getElementById("__rotor__");
+        if (el) {
+          el.style.transform =
+            "rotateX(" + e.data.x + "deg) rotateY(" + e.data.y + "deg)";
+        }
+      }
+    });
+  <\/script>
+  `;
+
+  iframe().srcdoc = wrapped;
   panel.style.opacity = "1";
   panel.style.pointerEvents = "auto";
 }
@@ -222,7 +230,6 @@ function clearAll() {
   iframe().srcdoc = "";
   panel.style.opacity = "0";
   panel.style.pointerEvents = "none";
-  rotor.style.transform = "none";
   rotX.value = 0;
   rotY.value = 0;
 }
@@ -240,10 +247,13 @@ function kill() {
   old.replaceWith(fresh);
 }
 
-/* Rotation now applied ONLY to rotor */
+/* Rotation now targets iframe content */
 function updateRotation() {
-  rotor.style.transform =
-    `rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`;
+  iframe().contentWindow?.postMessage({
+    type: "rotate",
+    x: rotX.value,
+    y: rotY.value
+  }, "*");
 }
 
 rotX.addEventListener("input", updateRotation);
