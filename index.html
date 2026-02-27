@@ -6,11 +6,9 @@
 <title>3D Preview Lab</title>
 
 <style>
-:root {
-  --lab-bg:#0e1116;
-}
+:root { --lab-bg:#0e1116; }
 
-html, body {
+html, body{
   margin:0;
   height:100%;
   background:var(--lab-bg);
@@ -20,8 +18,7 @@ html, body {
 }
 
 /* ───────── TOP BAR ───────── */
-
-#bar {
+#bar{
   height:56px;
   display:flex;
   gap:10px;
@@ -32,7 +29,7 @@ html, body {
   box-sizing:border-box;
 }
 
-button {
+button{
   background:#1f2630;
   color:#fff;
   border:1px solid #2d3642;
@@ -40,7 +37,7 @@ button {
   cursor:pointer;
 }
 
-label {
+label{
   color:#aaa;
   font-size:12px;
   display:flex;
@@ -48,19 +45,10 @@ label {
   gap:6px;
 }
 
-input[type=range] { width:120px; }
-
-input[type=text] {
-  width:90px;
-  background:#1f2630;
-  border:1px solid #2d3642;
-  color:#fff;
-  padding:4px 6px;
-}
+input[type=range]{ width:120px; }
 
 /* ───────── MAIN AREA ───────── */
-
-#wrap {
+#wrap{
   flex:1;
   display:flex;
   justify-content:center;
@@ -68,7 +56,7 @@ input[type=text] {
   overflow:hidden;
 }
 
-.scene {
+.scene{
   width:900px;
   height:650px;
   perspective:1400px;
@@ -77,8 +65,7 @@ input[type=text] {
   justify-content:center;
 }
 
-/* This is just a positioning container now */
-.viewer {
+.viewer{
   width:80%;
   height:80%;
   display:flex;
@@ -86,8 +73,8 @@ input[type=text] {
   justify-content:center;
 }
 
-/* No visible device anymore */
-.panel {
+/* Panel rotates entire iframe */
+.panel{
   width:100%;
   height:100%;
   display:flex;
@@ -95,21 +82,20 @@ input[type=text] {
   justify-content:center;
   opacity:0;
   pointer-events:none;
-  transition:opacity 0.25s ease;
+  transition:opacity .25s ease;
+  transform-style:preserve-3d;
+  transform-origin:center center;
+  will-change:transform;
 }
 
-/* Iframe now floats directly */
-.panel iframe {
+.panel iframe{
   border:none;
   background:transparent;
   width:100%;
   height:100%;
 }
 
-textarea {
-  position:absolute;
-  left:-9999px;
-}
+textarea{ position:absolute; left:-9999px; }
 </style>
 </head>
 <body>
@@ -120,17 +106,8 @@ textarea {
   <button id="clear">Clear</button>
   <button id="kill">Kill</button>
 
-  <label>X
-    <input type="range" id="rotX" min="-60" max="60" value="0">
-  </label>
-
-  <label>Y
-    <input type="range" id="rotY" min="-180" max="180" value="0">
-  </label>
-
-  <label>BGC
-    <input type="text" id="bgInput" value="#0e1116">
-  </label>
+  <label>X <input type="range" id="rotX" min="-60" max="60" value="0"></label>
+  <label>Y <input type="range" id="rotY" min="-180" max="180" value="0"></label>
 </div>
 
 <div id="wrap">
@@ -139,8 +116,7 @@ textarea {
       <div class="panel" id="panel">
         <iframe id="pv"
           sandbox="allow-scripts allow-same-origin"
-          scrolling="yes">
-        </iframe>
+          scrolling="yes"></iframe>
       </div>
     </div>
   </div>
@@ -149,82 +125,84 @@ textarea {
 <textarea id="code"></textarea>
 
 <script>
-const codeEl = document.getElementById("code");
-const panel = document.getElementById("panel");
-const rotX = document.getElementById("rotX");
-const rotY = document.getElementById("rotY");
-const bgInput = document.getElementById("bgInput");
+const codeEl  = document.getElementById("code");
+const panel   = document.getElementById("panel");
+const rotX    = document.getElementById("rotX");
+const rotY    = document.getElementById("rotY");
 
-function iframe() { return document.getElementById("pv"); }
+function iframe(){ return document.getElementById("pv"); }
 
-/* Tight CSP */
+/* Security layer (best effort in srcdoc) */
 const CSP = `
 <meta http-equiv="Content-Security-Policy"
-content="default-src 'none'; img-src https: data:; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+content="
+  default-src 'none';
+  base-uri 'none';
+  form-action 'none';
+  frame-ancestors 'none';
+  object-src 'none';
+  connect-src 'none';
+  media-src 'none';
+  font-src data:;
+  img-src data: https:;
+  style-src 'unsafe-inline';
+  script-src 'unsafe-inline';
+">
+<meta name="referrer" content="no-referrer">
 `;
 
-function run() {
-
-  const wrapped = `
-  ${CSP}
-  <style>
-    html, body {
-      margin:0;
-      height:100%;
-      background: transparent !important;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-
-    #__rotor__ {
-      transform-style: preserve-3d;
-      transform-origin:center center;
-      transition: transform 0.1s ease;
-    }
-  </style>
-
-  <div id="__rotor__">
-    ${codeEl.value}
-  </div>
-
-  <script>
-    window.addEventListener("message", (e) => {
-      if (e.data?.type === "rotate") {
-        const el = document.getElementById("__rotor__");
-        if (el) {
-          el.style.transform =
-            "rotateX(" + e.data.x + "deg) rotateY(" + e.data.y + "deg)";
-        }
-      }
-    });
-  <\/script>
-  `;
-
-  iframe().srcdoc = wrapped;
-  panel.style.opacity = "1";
-  panel.style.pointerEvents = "auto";
+function isFullDoc(s){
+  return /<!doctype\s+html|<html[\s>]/i.test(s);
 }
 
-async function paste() {
+function injectCSP(raw){
+  if(/Content-Security-Policy/i.test(raw)) return raw;
+
+  if(/<head[^>]*>/i.test(raw)){
+    return raw.replace(/<head[^>]*>/i, m => m + "\n" + CSP + "\n");
+  }
+  return CSP + raw;
+}
+
+function run(){
+  const raw = (codeEl.value || "").trim();
+  if(!raw){
+    iframe().srcdoc="";
+    panel.style.opacity="0";
+    panel.style.pointerEvents="none";
+    return;
+  }
+
+  if(isFullDoc(raw)){
+    iframe().srcdoc = injectCSP(raw);
+  } else {
+    iframe().srcdoc = CSP + raw;
+  }
+
+  panel.style.opacity="1";
+  panel.style.pointerEvents="auto";
+}
+
+async function paste(){
   const text = await navigator.clipboard.readText();
   codeEl.value = text;
   run();
 }
 
-function clearAll() {
-  codeEl.value = "";
-  iframe().srcdoc = "";
-  panel.style.opacity = "0";
-  panel.style.pointerEvents = "none";
-  rotX.value = 0;
-  rotY.value = 0;
+function clearAll(){
+  codeEl.value="";
+  iframe().srcdoc="";
+  panel.style.opacity="0";
+  panel.style.pointerEvents="none";
+  panel.style.transform="rotateX(0deg) rotateY(0deg)";
+  rotX.value=0;
+  rotY.value=0;
 }
 
-function kill() {
+function kill(){
   const old = iframe();
   const fresh = document.createElement("iframe");
-  fresh.id = "pv";
+  fresh.id="pv";
   fresh.setAttribute("sandbox","allow-scripts allow-same-origin");
   fresh.setAttribute("scrolling","yes");
   fresh.style.width="100%";
@@ -234,28 +212,14 @@ function kill() {
   old.replaceWith(fresh);
 }
 
-/* Rotation targets iframe content only */
-function updateRotation() {
-  iframe().contentWindow?.postMessage({
-    type: "rotate",
-    x: rotX.value,
-    y: rotY.value
-  }, "*");
+function updateRotation(){
+  panel.style.transform =
+    `rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`;
 }
 
 rotX.addEventListener("input", updateRotation);
 rotY.addEventListener("input", updateRotation);
 
-/* Lab Background Control */
-function updateBG() {
-  document.documentElement.style
-    .setProperty("--lab-bg", bgInput.value);
-}
-
-bgInput.addEventListener("input", updateBG);
-updateBG();
-
-/* Buttons */
 document.getElementById("paste").onclick =
   () => paste().catch(()=>alert("Paste blocked"));
 
