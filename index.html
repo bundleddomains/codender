@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>3D Preview Lab</title>
 
 <style>
@@ -15,18 +15,31 @@ html, body{
   display:flex;
   flex-direction:column;
   font-family:system-ui, sans-serif;
+  overflow:hidden; /* 🚫 no scroll */
 }
 
 /* ───────── TOP BAR ───────── */
 #bar{
-  height:56px;
   display:flex;
-  gap:10px;
-  align-items:center;
-  padding:8px 14px;
+  flex-direction:column; /* stack rows */
+  padding:10px 14px;
   background:#151922;
   border-bottom:1px solid #222;
   box-sizing:border-box;
+  gap:10px;
+}
+
+/* button row */
+#btnRow{
+  display:flex;
+  gap:10px;
+}
+
+/* slider row */
+#sliderRow{
+  display:flex;
+  gap:20px;
+  align-items:center;
 }
 
 button{
@@ -45,7 +58,7 @@ label{
   gap:6px;
 }
 
-input[type=range]{ width:120px; }
+input[type=range]{ width:160px; }
 
 /* ───────── MAIN AREA ───────── */
 #wrap{
@@ -101,13 +114,24 @@ textarea{ position:absolute; left:-9999px; }
 <body>
 
 <div id="bar">
-  <button id="paste">Paste</button>
-  <button id="run">Run</button>
-  <button id="clear">Clear</button>
-  <button id="kill">Kill</button>
 
-  <label>X <input type="range" id="rotX" min="-60" max="60" value="0"></label>
-  <label>Y <input type="range" id="rotY" min="-180" max="180" value="0"></label>
+  <div id="btnRow">
+    <button id="paste">Paste</button>
+    <button id="run">Run</button>
+    <button id="clear">Clear</button>
+    <button id="kill">Kill</button>
+  </div>
+
+  <div id="sliderRow">
+    <label>X
+      <input type="range" id="rotX" min="-60" max="60" value="0">
+    </label>
+
+    <label>Y
+      <input type="range" id="rotY" min="-180" max="180" value="0">
+    </label>
+  </div>
+
 </div>
 
 <div id="wrap">
@@ -116,7 +140,7 @@ textarea{ position:absolute; left:-9999px; }
       <div class="panel" id="panel">
         <iframe id="pv"
           sandbox="allow-scripts allow-same-origin"
-          scrolling="yes"></iframe>
+          scrolling="no"></iframe>
       </div>
     </div>
   </div>
@@ -132,7 +156,6 @@ const rotY    = document.getElementById("rotY");
 
 function iframe(){ return document.getElementById("pv"); }
 
-/* Security layer (best effort in srcdoc) */
 const CSP = `
 <meta http-equiv="Content-Security-Policy"
 content="
@@ -204,7 +227,7 @@ function kill(){
   const fresh = document.createElement("iframe");
   fresh.id="pv";
   fresh.setAttribute("sandbox","allow-scripts allow-same-origin");
-  fresh.setAttribute("scrolling","yes");
+  fresh.setAttribute("scrolling","no");
   fresh.style.width="100%";
   fresh.style.height="100%";
   fresh.style.border="none";
