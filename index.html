@@ -2,8 +2,8 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>3D Preview Lab + Layers</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Preview Lab</title>
 
 <style>
 :root { --lab-bg:#0e1116; }
@@ -28,7 +28,6 @@ border-bottom:1px solid #222;
 gap:10px;
 }
 
-/* row */
 .row{
 display:flex;
 gap:10px;
@@ -53,7 +52,8 @@ background:yellow;
 color:#000;
 }
 
-/* slider row */
+/* sliders */
+
 label{
 color:#aaa;
 font-size:12px;
@@ -64,7 +64,24 @@ gap:6px;
 
 input[type=range]{width:160px;}
 
-/* main */
+/* visible editor */
+
+#code{
+width:100%;
+height:140px;
+background:#0b0f15;
+color:#fff;
+border:none;
+border-top:1px solid #222;
+padding:10px;
+font-family:monospace;
+font-size:14px;
+box-sizing:border-box;
+resize:none;
+}
+
+/* main preview */
+
 #wrap{
 flex:1;
 display:flex;
@@ -108,10 +125,6 @@ width:100%;
 height:100%;
 }
 
-textarea{
-position:absolute;
-left:-9999px;
-}
 </style>
 </head>
 
@@ -135,6 +148,8 @@ left:-9999px;
 
 </div>
 
+<textarea id="code" placeholder="paste code here"></textarea>
+
 <div id="wrap">
 <div class="scene">
 <div class="viewer">
@@ -147,8 +162,6 @@ scrolling="no"></iframe>
 </div>
 </div>
 
-<textarea id="code"></textarea>
-
 <script>
 
 const codeEl=document.getElementById("code")
@@ -159,10 +172,11 @@ const rotY=document.getElementById("rotY")
 function iframe(){return document.getElementById("pv")}
 
 /* layers */
+
 let currentLayer=1
 let layers={}
 
-for(let i=1;i<=10;i++)layers[i]=""
+for(let i=1;i<=10;i++) layers[i]=""
 
 const layerWrap=document.getElementById("layers")
 
@@ -188,7 +202,8 @@ codeEl.value=layers[n]||""
 
 }
 
-/* run layer */
+/* run */
+
 function run(){
 
 const raw=(codeEl.value||"").trim()
@@ -203,6 +218,7 @@ panel.style.pointerEvents="auto"
 }
 
 /* render stacked layers */
+
 function renderLayers(){
 
 let html=`<body style="margin:0;background:black;position:relative;">`
@@ -232,6 +248,7 @@ iframe().srcdoc=html
 }
 
 /* paste */
+
 async function paste(){
 
 const text=await navigator.clipboard.readText()
@@ -240,6 +257,7 @@ codeEl.value=text
 }
 
 /* clear */
+
 function clearLayer(){
 
 layers[currentLayer]=""
@@ -249,7 +267,8 @@ renderLayers()
 
 }
 
-/* kill */
+/* kill iframe */
+
 function kill(){
 
 const old=iframe()
@@ -268,6 +287,7 @@ old.replaceWith(fresh)
 }
 
 /* rotation */
+
 function updateRotation(){
 
 panel.style.transform=
