@@ -2,253 +2,289 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>3D Preview Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>3D Preview Lab + Layers</title>
 
 <style>
 :root { --lab-bg:#0e1116; }
 
-html, body{
-  margin:0;
-  height:100%;
-  background:var(--lab-bg);
-  display:flex;
-  flex-direction:column;
-  font-family:system-ui, sans-serif;
-  overflow:hidden; /* 🚫 no scroll */
+html,body{
+margin:0;
+height:100%;
+background:var(--lab-bg);
+display:flex;
+flex-direction:column;
+font-family:system-ui,sans-serif;
+overflow:hidden;
 }
 
-/* ───────── TOP BAR ───────── */
+/* top bar */
 #bar{
-  display:flex;
-  flex-direction:column; /* stack rows */
-  padding:10px 14px;
-  background:#151922;
-  border-bottom:1px solid #222;
-  box-sizing:border-box;
-  gap:10px;
+display:flex;
+flex-direction:column;
+padding:10px 14px;
+background:#151922;
+border-bottom:1px solid #222;
+gap:10px;
 }
 
-/* button row */
-#btnRow{
-  display:flex;
-  gap:10px;
+/* row */
+.row{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+}
+
+/* buttons */
+button{
+background:#1f2630;
+color:#fff;
+border:1px solid #2d3642;
+padding:8px 14px;
+cursor:pointer;
+}
+
+.layer{
+background:#555;
+}
+
+.layer.active{
+background:yellow;
+color:#000;
 }
 
 /* slider row */
-#sliderRow{
-  display:flex;
-  gap:20px;
-  align-items:center;
-}
-
-button{
-  background:#1f2630;
-  color:#fff;
-  border:1px solid #2d3642;
-  padding:8px 14px;
-  cursor:pointer;
-}
-
 label{
-  color:#aaa;
-  font-size:12px;
-  display:flex;
-  align-items:center;
-  gap:6px;
+color:#aaa;
+font-size:12px;
+display:flex;
+align-items:center;
+gap:6px;
 }
 
-input[type=range]{ width:160px; }
+input[type=range]{width:160px;}
 
-/* ───────── MAIN AREA ───────── */
+/* main */
 #wrap{
-  flex:1;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  overflow:hidden;
+flex:1;
+display:flex;
+justify-content:center;
+align-items:center;
 }
 
 .scene{
-  width:900px;
-  height:650px;
-  perspective:1400px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+width:900px;
+height:650px;
+perspective:1400px;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
 .viewer{
-  width:80%;
-  height:80%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+width:80%;
+height:80%;
+display:flex;
+align-items:center;
+justify-content:center;
 }
 
-/* Panel rotates entire iframe */
 .panel{
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  opacity:0;
-  pointer-events:none;
-  transition:opacity .25s ease;
-  transform-style:preserve-3d;
-  transform-origin:center center;
-  will-change:transform;
+width:100%;
+height:100%;
+display:flex;
+align-items:center;
+justify-content:center;
+opacity:0;
+pointer-events:none;
+transition:opacity .25s ease;
+transform-style:preserve-3d;
 }
 
 .panel iframe{
-  border:none;
-  background:transparent;
-  width:100%;
-  height:100%;
+border:none;
+background:transparent;
+width:100%;
+height:100%;
 }
 
-textarea{ position:absolute; left:-9999px; }
+textarea{
+position:absolute;
+left:-9999px;
+}
 </style>
 </head>
+
 <body>
 
 <div id="bar">
 
-  <div id="btnRow">
-    <button id="paste">Paste</button>
-    <button id="run">Run</button>
-    <button id="clear">Clear</button>
-    <button id="kill">Kill</button>
-  </div>
+<div class="row">
+<button id="paste">Paste</button>
+<button id="run">Run</button>
+<button id="clear">Clear Layer</button>
+<button id="kill">Kill</button>
+</div>
 
-  <div id="sliderRow">
-    <label>X
-      <input type="range" id="rotX" min="-60" max="60" value="0">
-    </label>
+<div class="row" id="layers"></div>
 
-    <label>Y
-      <input type="range" id="rotY" min="-180" max="180" value="0">
-    </label>
-  </div>
+<div class="row">
+<label>X <input type="range" id="rotX" min="-60" max="60" value="0"></label>
+<label>Y <input type="range" id="rotY" min="-180" max="180" value="0"></label>
+</div>
 
 </div>
 
 <div id="wrap">
-  <div class="scene">
-    <div class="viewer">
-      <div class="panel" id="panel">
-        <iframe id="pv"
-          sandbox="allow-scripts allow-same-origin"
-          scrolling="no"></iframe>
-      </div>
-    </div>
-  </div>
+<div class="scene">
+<div class="viewer">
+<div class="panel" id="panel">
+<iframe id="pv"
+sandbox="allow-scripts allow-same-origin"
+scrolling="no"></iframe>
+</div>
+</div>
+</div>
 </div>
 
 <textarea id="code"></textarea>
 
 <script>
-const codeEl  = document.getElementById("code");
-const panel   = document.getElementById("panel");
-const rotX    = document.getElementById("rotX");
-const rotY    = document.getElementById("rotY");
 
-function iframe(){ return document.getElementById("pv"); }
+const codeEl=document.getElementById("code")
+const panel=document.getElementById("panel")
+const rotX=document.getElementById("rotX")
+const rotY=document.getElementById("rotY")
 
-const CSP = `
-<meta http-equiv="Content-Security-Policy"
-content="
-  default-src 'none';
-  base-uri 'none';
-  form-action 'none';
-  frame-ancestors 'none';
-  object-src 'none';
-  connect-src 'none';
-  media-src 'none';
-  font-src data:;
-  img-src data: https:;
-  style-src 'unsafe-inline';
-  script-src 'unsafe-inline';
-">
-<meta name="referrer" content="no-referrer">
-`;
+function iframe(){return document.getElementById("pv")}
 
-function isFullDoc(s){
-  return /<!doctype\s+html|<html[\s>]/i.test(s);
+/* layers */
+let currentLayer=1
+let layers={}
+
+for(let i=1;i<=10;i++)layers[i]=""
+
+const layerWrap=document.getElementById("layers")
+
+for(let i=1;i<=10;i++){
+
+const b=document.createElement("button")
+b.textContent=i
+b.className="layer"+(i===1?" active":"")
+b.onclick=()=>selectLayer(i)
+
+layerWrap.appendChild(b)
+
 }
 
-function injectCSP(raw){
-  if(/Content-Security-Policy/i.test(raw)) return raw;
+function selectLayer(n){
 
-  if(/<head[^>]*>/i.test(raw)){
-    return raw.replace(/<head[^>]*>/i, m => m + "\n" + CSP + "\n");
-  }
-  return CSP + raw;
+currentLayer=n
+
+document.querySelectorAll(".layer").forEach(b=>b.classList.remove("active"))
+layerWrap.children[n-1].classList.add("active")
+
+codeEl.value=layers[n]||""
+
 }
 
+/* run layer */
 function run(){
-  const raw = (codeEl.value || "").trim();
-  if(!raw){
-    iframe().srcdoc="";
-    panel.style.opacity="0";
-    panel.style.pointerEvents="none";
-    return;
-  }
 
-  if(isFullDoc(raw)){
-    iframe().srcdoc = injectCSP(raw);
-  } else {
-    iframe().srcdoc = CSP + raw;
-  }
+const raw=(codeEl.value||"").trim()
 
-  panel.style.opacity="1";
-  panel.style.pointerEvents="auto";
+layers[currentLayer]=raw
+
+renderLayers()
+
+panel.style.opacity="1"
+panel.style.pointerEvents="auto"
+
 }
 
+/* render stacked layers */
+function renderLayers(){
+
+let html=`<body style="margin:0;background:black;position:relative;">`
+
+for(let i=1;i<=10;i++){
+
+if(layers[i]){
+
+html+=`
+<div id="layer${i}" style="
+position:absolute;
+top:50px;
+left:50px;
+">
+${layers[i]}
+</div>
+`
+
+}
+
+}
+
+html+="</body>"
+
+iframe().srcdoc=html
+
+}
+
+/* paste */
 async function paste(){
-  const text = await navigator.clipboard.readText();
-  codeEl.value = text;
-  run();
+
+const text=await navigator.clipboard.readText()
+codeEl.value=text
+
 }
 
-function clearAll(){
-  codeEl.value="";
-  iframe().srcdoc="";
-  panel.style.opacity="0";
-  panel.style.pointerEvents="none";
-  panel.style.transform="rotateX(0deg) rotateY(0deg)";
-  rotX.value=0;
-  rotY.value=0;
+/* clear */
+function clearLayer(){
+
+layers[currentLayer]=""
+codeEl.value=""
+
+renderLayers()
+
 }
 
+/* kill */
 function kill(){
-  const old = iframe();
-  const fresh = document.createElement("iframe");
-  fresh.id="pv";
-  fresh.setAttribute("sandbox","allow-scripts allow-same-origin");
-  fresh.setAttribute("scrolling","no");
-  fresh.style.width="100%";
-  fresh.style.height="100%";
-  fresh.style.border="none";
-  fresh.style.background="transparent";
-  old.replaceWith(fresh);
+
+const old=iframe()
+
+const fresh=document.createElement("iframe")
+
+fresh.id="pv"
+fresh.setAttribute("sandbox","allow-scripts allow-same-origin")
+fresh.setAttribute("scrolling","no")
+fresh.style.width="100%"
+fresh.style.height="100%"
+fresh.style.border="none"
+
+old.replaceWith(fresh)
+
 }
 
+/* rotation */
 function updateRotation(){
-  panel.style.transform =
-    `rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`;
+
+panel.style.transform=
+`rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`
+
 }
 
-rotX.addEventListener("input", updateRotation);
-rotY.addEventListener("input", updateRotation);
+rotX.oninput=updateRotation
+rotY.oninput=updateRotation
 
-document.getElementById("paste").onclick =
-  () => paste().catch(()=>alert("Paste blocked"));
+document.getElementById("paste").onclick=
+()=>paste().catch(()=>alert("paste blocked"))
 
-document.getElementById("run").onclick = run;
-document.getElementById("clear").onclick = clearAll;
-document.getElementById("kill").onclick = kill;
+document.getElementById("run").onclick=run
+document.getElementById("clear").onclick=clearLayer
+document.getElementById("kill").onclick=kill
+
 </script>
 
 </body>
