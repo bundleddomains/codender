@@ -1,12 +1,18 @@
+
 <!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>3D Preview Lab</title>
+<title>Editure Lab</title>
 
 <style>
-:root{--lab-bg:#0e1116;}
+
+:root{
+--lab-bg:#0e1116;
+--bar-normal:#151922;
+--bar-code:#0b3d91;
+}
 
 html,body{
 margin:0;
@@ -22,9 +28,14 @@ overflow:hidden;
 display:flex;
 flex-direction:column;
 padding:10px 14px;
-background:#151922;
+background:var(--bar-normal);
 border-bottom:1px solid #222;
 gap:10px;
+transition:.2s;
+}
+
+#bar.codeMode{
+background:var(--bar-code);
 }
 
 .row{
@@ -60,9 +71,11 @@ gap:6px;
 
 input[type=range]{width:160px;}
 
+/* code editor hidden until double tap */
+
 #code{
 width:100%;
-height:140px;
+height:160px;
 background:#0b0f15;
 color:#fff;
 border:none;
@@ -72,7 +85,10 @@ font-family:monospace;
 font-size:14px;
 box-sizing:border-box;
 resize:none;
+display:none;
 }
+
+/* preview */
 
 #wrap{
 flex:1;
@@ -156,14 +172,18 @@ scrolling="no"></iframe>
 
 <script>
 
+/* elements */
+
 const codeEl=document.getElementById("code")
 const panel=document.getElementById("panel")
 const rotX=document.getElementById("rotX")
 const rotY=document.getElementById("rotY")
+const bar=document.getElementById("bar")
+const wrap=document.getElementById("wrap")
 
 function iframe(){return document.getElementById("pv")}
 
-/* layer storage */
+/* layers */
 
 let currentLayer=1
 let layers={}
@@ -174,7 +194,7 @@ layers[i]=""
 layerTransforms[i]={x:0,y:0}
 }
 
-/* build layer buttons */
+/* layer buttons */
 
 const layerWrap=document.getElementById("layers")
 
@@ -189,7 +209,7 @@ layerWrap.appendChild(b)
 
 }
 
-/* layer selection */
+/* layer select */
 
 function selectLayer(n){
 
@@ -214,7 +234,7 @@ rotY.value=layerTransforms[n].y
 
 }
 
-/* run layer */
+/* run */
 
 function run(){
 
@@ -229,7 +249,7 @@ panel.style.pointerEvents="auto"
 
 }
 
-/* render stacked layers */
+/* render layers */
 
 function renderLayers(){
 
@@ -242,7 +262,7 @@ if(layers[i]){
 const t=layerTransforms[i]
 
 html+=`
-<div id="layer${i}" style="
+<div style="
 position:absolute;
 top:50px;
 left:50px;
@@ -324,6 +344,63 @@ panel.style.transform=
 
 rotX.oninput=updateRotation
 rotY.oninput=updateRotation
+
+/* double tap mode switching */
+
+let tapTimer=null
+let codeMode=false
+
+function toggleCodeMode(){
+
+codeMode=!codeMode
+
+if(codeMode){
+
+codeEl.style.display="block"
+panel.style.display="none"
+bar.classList.add("codeMode")
+
+}else{
+
+codeEl.style.display="none"
+panel.style.display="flex"
+bar.classList.remove("codeMode")
+
+}
+
+}
+
+wrap.addEventListener("click",()=>{
+
+if(tapTimer){
+
+clearTimeout(tapTimer)
+tapTimer=null
+toggleCodeMode()
+
+}else{
+
+tapTimer=setTimeout(()=>tapTimer=null,250)
+
+}
+
+})
+
+codeEl.addEventListener("click",()=>{
+
+if(tapTimer){
+
+clearTimeout(tapTimer)
+tapTimer=null
+toggleCodeMode()
+
+}else{
+
+tapTimer=setTimeout(()=>tapTimer=null,250)
+
+}
+
+})
 
 document.getElementById("paste").onclick=
 ()=>paste().catch(()=>alert("paste blocked"))
