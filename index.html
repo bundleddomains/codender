@@ -167,8 +167,6 @@ scrolling="no"></iframe>
 
 <script>
 
-/* elements */
-
 const codeEl=document.getElementById("code")
 const panel=document.getElementById("panel")
 const rotX=document.getElementById("rotX")
@@ -178,8 +176,6 @@ const wrap=document.getElementById("wrap")
 
 function iframe(){return document.getElementById("pv")}
 
-/* layers */
-
 let currentLayer=1
 let layers={}
 let layerTransforms={}
@@ -188,8 +184,6 @@ for(let i=1;i<=10;i++){
 layers[i]=""
 layerTransforms[i]={x:0,y:0}
 }
-
-/* layer buttons */
 
 const layerWrap=document.getElementById("layers")
 
@@ -203,8 +197,6 @@ b.onclick=()=>selectLayer(i)
 layerWrap.appendChild(b)
 
 }
-
-/* layer select */
 
 function selectLayer(n){
 
@@ -229,8 +221,6 @@ rotY.value=layerTransforms[n].y
 
 }
 
-/* run */
-
 function run(){
 
 const raw=(codeEl.value||"").trim()
@@ -244,9 +234,20 @@ panel.style.pointerEvents="auto"
 
 }
 
-/* render layers */
-
 function renderLayers(){
+
+let activeLayers = Object.values(layers).filter(v=>v.trim()!="")
+
+/* if only one layer → run raw code exactly */
+
+if(activeLayers.length===1){
+
+iframe().srcdoc=activeLayers[0]
+return
+
+}
+
+/* multi-layer mode */
 
 let html=`<body style="margin:0;background:black;position:relative;">`
 
@@ -278,23 +279,17 @@ iframe().srcdoc=html
 
 }
 
-/* paste */
-
 async function paste(){
 
 const text=await navigator.clipboard.readText()
 
 codeEl.value=text
 
-/* auto enter code mode */
-
 if(!codeMode){
 toggleCodeMode()
 }
 
 }
-
-/* clear */
 
 function clearLayer(){
 
@@ -304,8 +299,6 @@ codeEl.value=""
 renderLayers()
 
 }
-
-/* kill iframe */
 
 function kill(){
 
@@ -323,8 +316,6 @@ fresh.style.border="none"
 old.replaceWith(fresh)
 
 }
-
-/* rotation */
 
 function updateRotation(){
 
@@ -346,8 +337,6 @@ panel.style.transform=
 
 rotX.oninput=updateRotation
 rotY.oninput=updateRotation
-
-/* double tap mode switching */
 
 let tapTimer=null
 let codeMode=false
