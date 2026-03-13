@@ -172,14 +172,16 @@ let currentLayer=1
 let layers={}
 let layerTransforms={}
 
-for(let i=1;i<=10;i++){
+/* 8 layers instead of 10 */
+
+for(let i=1;i<=8;i++){
 layers[i]=""
 layerTransforms[i]={x:0,y:0}
 }
 
 const layerWrap=document.getElementById("layers")
 
-for(let i=1;i<=10;i++){
+for(let i=1;i<=8;i++){
 
 const b=document.createElement("button")
 b.textContent=i
@@ -239,7 +241,7 @@ return
 
 let html=`<body style="margin:0;background:black;position:relative;">`
 
-for(let i=1;i<=10;i++){
+for(let i=1;i<=8;i++){
 
 if(layers[i]){
 
@@ -319,18 +321,12 @@ panel.style.transform=
 rotX.oninput=updateRotation
 rotY.oninput=updateRotation
 
-/* code toggle button */
-
 document.getElementById("toggleCode").onclick=()=>{
 
 if(codeEl.style.display==="none"){
-
 codeEl.style.display="block"
-
 }else{
-
 codeEl.style.display="none"
-
 }
 
 }
