@@ -6,7 +6,7 @@
 <title>3D Preview Lab</title>
 
 <style>
-:root { --lab-bg:#0e1116; }
+:root{--lab-bg:#0e1116;}
 
 html,body{
 margin:0;
@@ -18,7 +18,6 @@ font-family:system-ui,sans-serif;
 overflow:hidden;
 }
 
-/* top bar */
 #bar{
 display:flex;
 flex-direction:column;
@@ -34,7 +33,6 @@ gap:10px;
 flex-wrap:wrap;
 }
 
-/* buttons */
 button{
 background:#1f2630;
 color:#fff;
@@ -52,8 +50,6 @@ background:yellow;
 color:#000;
 }
 
-/* sliders */
-
 label{
 color:#aaa;
 font-size:12px;
@@ -63,8 +59,6 @@ gap:6px;
 }
 
 input[type=range]{width:160px;}
-
-/* visible editor */
 
 #code{
 width:100%;
@@ -79,8 +73,6 @@ font-size:14px;
 box-sizing:border-box;
 resize:none;
 }
-
-/* main preview */
 
 #wrap{
 flex:1;
@@ -171,12 +163,18 @@ const rotY=document.getElementById("rotY")
 
 function iframe(){return document.getElementById("pv")}
 
-/* layers */
+/* layer storage */
 
 let currentLayer=1
 let layers={}
+let layerTransforms={}
 
-for(let i=1;i<=10;i++) layers[i]=""
+for(let i=1;i<=10;i++){
+layers[i]=""
+layerTransforms[i]={x:0,y:0}
+}
+
+/* build layer buttons */
 
 const layerWrap=document.getElementById("layers")
 
@@ -191,7 +189,18 @@ layerWrap.appendChild(b)
 
 }
 
+/* layer selection */
+
 function selectLayer(n){
+
+if(currentLayer===n){
+
+currentLayer=null
+document.querySelectorAll(".layer").forEach(b=>b.classList.remove("active"))
+codeEl.value=""
+return
+
+}
 
 currentLayer=n
 
@@ -200,9 +209,12 @@ layerWrap.children[n-1].classList.add("active")
 
 codeEl.value=layers[n]||""
 
+rotX.value=layerTransforms[n].x
+rotY.value=layerTransforms[n].y
+
 }
 
-/* run */
+/* run layer */
 
 function run(){
 
@@ -227,11 +239,15 @@ for(let i=1;i<=10;i++){
 
 if(layers[i]){
 
+const t=layerTransforms[i]
+
 html+=`
 <div id="layer${i}" style="
 position:absolute;
 top:50px;
 left:50px;
+transform:rotateX(${t.x}deg) rotateY(${t.y}deg);
+transform-style:preserve-3d;
 ">
 ${layers[i]}
 </div>
@@ -290,8 +306,19 @@ old.replaceWith(fresh)
 
 function updateRotation(){
 
+if(currentLayer){
+
+layerTransforms[currentLayer].x=rotX.value
+layerTransforms[currentLayer].y=rotY.value
+
+renderLayers()
+
+}else{
+
 panel.style.transform=
 `rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`
+
+}
 
 }
 
