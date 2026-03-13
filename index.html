@@ -172,8 +172,6 @@ let currentLayer=1
 let layers={}
 let layerTransforms={}
 
-/* 8 layers instead of 10 */
-
 for(let i=1;i<=8;i++){
 layers[i]=""
 layerTransforms[i]={x:0,y:0}
@@ -234,7 +232,21 @@ let activeLayers=Object.values(layers).filter(v=>v.trim()!="")
 
 if(activeLayers.length===1){
 
-iframe().srcdoc=activeLayers[0]
+let i=Object.keys(layers).find(k=>layers[k].trim()!="")
+let t=layerTransforms[i]
+
+let html=`
+<body style="margin:0;background:black;display:flex;align-items:center;justify-content:center;height:100vh;">
+<div style="
+transform:rotateX(${t.x}deg) rotateY(${t.y}deg);
+transform-style:preserve-3d;
+">
+${layers[i]}
+</div>
+</body>
+`
+
+iframe().srcdoc=html
 return
 
 }
