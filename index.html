@@ -68,9 +68,7 @@ gap:6px;
 
 input[type=range]{width:160px;}
 
-#orbit{
-width:100%;
-}
+#orbit{width:100%;}
 
 #code{
 display:none;
@@ -167,9 +165,7 @@ height:100%;
 <div class="scene">
 <div class="viewer" id="viewer">
 <div class="panel" id="panel">
-<iframe id="pv"
-sandbox="allow-scripts allow-same-origin"
-scrolling="no"></iframe>
+<iframe id="pv" sandbox="allow-scripts allow-same-origin"></iframe>
 </div>
 </div>
 </div>
@@ -200,26 +196,14 @@ layerTransforms[i]={x:0,y:0}
 const layerWrap=document.getElementById("layers")
 
 for(let i=1;i<=8;i++){
-
 const b=document.createElement("button")
 b.textContent=i
 b.className="layer"+(i===1?" active":"")
 b.onclick=()=>selectLayer(i)
-
 layerWrap.appendChild(b)
-
 }
 
 function selectLayer(n){
-
-if(currentLayer===n){
-
-currentLayer=null
-document.querySelectorAll(".layer").forEach(b=>b.classList.remove("active"))
-codeEl.value=""
-return
-
-}
 
 currentLayer=n
 
@@ -235,10 +219,7 @@ rotY.value=layerTransforms[n].y
 
 function run(){
 
-const raw=(codeEl.value||"").trim()
-
-layers[currentLayer]=raw
-
+layers[currentLayer]=codeEl.value
 renderLayers()
 
 panel.style.opacity="1"
@@ -248,31 +229,35 @@ panel.style.pointerEvents="auto"
 
 function renderLayers(){
 
-let html=`
-<body style="margin:0;background:black;overflow:hidden;">
-
-<div style="
-position:relative;
-width:100vw;
-height:100vh;
+let html=`<!doctype html>
+<html>
+<head>
+<style>
+body{
+margin:0;
+background:black;
 display:flex;
 align-items:center;
 justify-content:center;
-">
-
-<canvas id="grid" style="
+height:100vh;
+overflow:hidden;
+}
+#grid{
 position:absolute;
 inset:0;
 pointer-events:none;
-"></canvas>
-
-<div style="
+}
+#stage{
 position:relative;
-display:flex;
-align-items:center;
-justify-content:center;
 transform-style:preserve-3d;
-">
+}
+</style>
+</head>
+<body>
+
+<canvas id="grid"></canvas>
+
+<div id="stage">
 `
 
 for(let i=1;i<=8;i++){
@@ -286,9 +271,6 @@ html+=`
 position:absolute;
 transform:rotateX(${t.x}deg) rotateY(${t.y}deg);
 transform-style:preserve-3d;
-display:flex;
-align-items:center;
-justify-content:center;
 ">
 ${layers[i]}
 </div>
@@ -312,27 +294,21 @@ function draw(){
 g.width=window.innerWidth
 g.height=window.innerHeight
 
-const W=g.width
-const H=g.height
-
-ctx.clearRect(0,0,W,H)
-
 let grid=50
 
 ctx.strokeStyle="#1b2430"
-ctx.lineWidth=1
 
-for(let x=0;x<W;x+=grid){
+for(let x=0;x<g.width;x+=grid){
 ctx.beginPath()
 ctx.moveTo(x,0)
-ctx.lineTo(x,H)
+ctx.lineTo(x,g.height)
 ctx.stroke()
 }
 
-for(let y=0;y<H;y+=grid){
+for(let y=0;y<g.height;y+=grid){
 ctx.beginPath()
 ctx.moveTo(0,y)
-ctx.lineTo(W,y)
+ctx.lineTo(g.width,y)
 ctx.stroke()
 }
 
@@ -340,25 +316,14 @@ ctx.strokeStyle="#00ffaa"
 ctx.lineWidth=2
 
 ctx.beginPath()
-ctx.moveTo(W/2,0)
-ctx.lineTo(W/2,H)
+ctx.moveTo(g.width/2,0)
+ctx.lineTo(g.width/2,g.height)
 ctx.stroke()
 
 ctx.beginPath()
-ctx.moveTo(0,H/2)
-ctx.lineTo(W,H/2)
+ctx.moveTo(0,g.height/2)
+ctx.lineTo(g.width,g.height/2)
 ctx.stroke()
-
-ctx.fillStyle="#00ffaa"
-ctx.font="12px monospace"
-
-for(let x=0;x<W;x+=100){
-ctx.fillText(x,x+4,12)
-}
-
-for(let y=0;y<H;y+=100){
-ctx.fillText(y,4,y-4)
-}
 
 }
 
@@ -368,91 +333,48 @@ window.onresize=draw
 <\/script>
 
 </body>
+</html>
 `
 
 iframe().srcdoc=html
 
 }
 
-async function paste(){
-
-const text=await navigator.clipboard.readText()
-codeEl.value=text
-
-}
-
 function clearLayer(){
-
 layers[currentLayer]=""
 codeEl.value=""
 renderLayers()
-
 }
 
 function kill(){
-
-const old=iframe()
-
-const fresh=document.createElement("iframe")
-
-fresh.id="pv"
-fresh.setAttribute("sandbox","allow-scripts allow-same-origin")
-fresh.setAttribute("scrolling","no")
-fresh.style.width="100%"
-fresh.style.height="100%"
-fresh.style.border="none"
-
-old.replaceWith(fresh)
-
+iframe().srcdoc=""
 }
 
-function updateRotation(){
-
-if(currentLayer){
-
+rotX.oninput=()=>{
 layerTransforms[currentLayer].x=rotX.value
+renderLayers()
+}
+
+rotY.oninput=()=>{
 layerTransforms[currentLayer].y=rotY.value
 renderLayers()
-
-}else{
-
-panel.style.transform=
-\`rotateX(\${rotX.value}deg) rotateY(\${rotY.value}deg)\`
-
 }
-
-}
-
-rotX.oninput=updateRotation
-rotY.oninput=updateRotation
 
 orbit.oninput=()=>{
-
-viewer.style.transform=
-\`rotateY(\${orbit.value}deg)\`
-
+viewer.style.transform=\`rotateY(\${orbit.value}deg)\`
 }
 
 toggleCodeBtn.onclick=()=>{
 
 if(codeEl.style.display==="none"){
-
 codeEl.style.display="block"
 wrap.style.display="none"
-toggleCodeBtn.classList.add("active")
-
 }else{
-
 codeEl.style.display="none"
 wrap.style.display="flex"
-toggleCodeBtn.classList.remove("active")
-
 }
 
 }
-
-document.getElementById("paste").onclick=
-()=>paste().catch(()=>alert("paste blocked"))
 
 document.getElementById("run").onclick=run
 document.getElementById("clear").onclick=clearLayer
