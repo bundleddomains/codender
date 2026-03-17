@@ -248,30 +248,32 @@ panel.style.pointerEvents="auto"
 
 function renderLayers(){
 
-let activeLayers=Object.values(layers).filter(v=>v.trim()!="")
-
-if(activeLayers.length===1){
-
-let i=Object.keys(layers).find(k=>layers[k].trim()!="")
-let t=layerTransforms[i]
-
 let html=`
-<body style="margin:0;background:black;display:flex;align-items:center;justify-content:center;height:100vh;">
+<body style="margin:0;background:black;overflow:hidden;">
+
 <div style="
-transform:rotateX(${t.x}deg) rotateY(${t.y}deg);
+position:relative;
+width:100vw;
+height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
+">
+
+<canvas id="grid" style="
+position:absolute;
+inset:0;
+pointer-events:none;
+"></canvas>
+
+<div style="
+position:relative;
+display:flex;
+align-items:center;
+justify-content:center;
 transform-style:preserve-3d;
 ">
-${layers[i]}
-</div>
-</body>
 `
-
-iframe().srcdoc=html
-return
-
-}
-
-let html=`<body style="margin:0;background:black;position:relative;">`
 
 for(let i=1;i<=8;i++){
 
@@ -282,10 +284,11 @@ const t=layerTransforms[i]
 html+=`
 <div style="
 position:absolute;
-top:50px;
-left:50px;
 transform:rotateX(${t.x}deg) rotateY(${t.y}deg);
 transform-style:preserve-3d;
+display:flex;
+align-items:center;
+justify-content:center;
 ">
 ${layers[i]}
 </div>
@@ -295,7 +298,77 @@ ${layers[i]}
 
 }
 
-html+="</body>"
+html+=`
+
+</div>
+
+<script>
+
+const g=document.getElementById("grid")
+const ctx=g.getContext("2d")
+
+function draw(){
+
+g.width=window.innerWidth
+g.height=window.innerHeight
+
+const W=g.width
+const H=g.height
+
+ctx.clearRect(0,0,W,H)
+
+let grid=50
+
+ctx.strokeStyle="#1b2430"
+ctx.lineWidth=1
+
+for(let x=0;x<W;x+=grid){
+ctx.beginPath()
+ctx.moveTo(x,0)
+ctx.lineTo(x,H)
+ctx.stroke()
+}
+
+for(let y=0;y<H;y+=grid){
+ctx.beginPath()
+ctx.moveTo(0,y)
+ctx.lineTo(W,y)
+ctx.stroke()
+}
+
+ctx.strokeStyle="#00ffaa"
+ctx.lineWidth=2
+
+ctx.beginPath()
+ctx.moveTo(W/2,0)
+ctx.lineTo(W/2,H)
+ctx.stroke()
+
+ctx.beginPath()
+ctx.moveTo(0,H/2)
+ctx.lineTo(W,H/2)
+ctx.stroke()
+
+ctx.fillStyle="#00ffaa"
+ctx.font="12px monospace"
+
+for(let x=0;x<W;x+=100){
+ctx.fillText(x,x+3,12)
+}
+
+for(let y=0;y<H;y+=100){
+ctx.fillText(y,3,y-3)
+}
+
+}
+
+draw()
+window.onresize=draw
+
+<\/script>
+
+</body>
+`
 
 iframe().srcdoc=html
 
@@ -344,7 +417,7 @@ renderLayers()
 }else{
 
 panel.style.transform=
-`rotateX(${rotX.value}deg) rotateY(${rotY.value}deg)`
+\`rotateX(\${rotX.value}deg) rotateY(\${rotY.value}deg)\`
 
 }
 
@@ -356,7 +429,7 @@ rotY.oninput=updateRotation
 orbit.oninput=()=>{
 
 viewer.style.transform=
-`rotateY(${orbit.value}deg)`
+\`rotateY(\${orbit.value}deg)\`
 
 }
 
