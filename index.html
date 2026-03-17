@@ -177,8 +177,6 @@ scrolling="no"></iframe>
 
 <script>
 
-/* JS unchanged */
-
 const codeEl=document.getElementById("code")
 const panel=document.getElementById("panel")
 const rotX=document.getElementById("rotX")
@@ -356,9 +354,35 @@ rotX.oninput=updateRotation
 rotY.oninput=updateRotation
 
 orbit.oninput=()=>{
-
 viewer.style.transform=
 `rotateY(${orbit.value}deg)`
+}
+
+/* 🔥 NEW FORMATTER */
+
+function formatCode(str){
+
+str = str.replace(/></g, ">\n<")
+
+let indent = 0
+const lines = str.split("\n")
+
+return lines.map(line=>{
+
+line = line.trim()
+
+if(line.startsWith("</")) indent--
+
+let out = "  ".repeat(Math.max(indent,0)) + line
+
+if(line.startsWith("<") && 
+!line.startsWith("</") && 
+!line.endsWith("/>") && 
+!line.includes("</")) indent++
+
+return out
+
+}).join("\n")
 
 }
 
@@ -369,6 +393,8 @@ if(codeEl.style.display==="none"){
 codeEl.style.display="block"
 wrap.style.display="none"
 toggleCodeBtn.classList.add("active")
+
+codeEl.value = formatCode(codeEl.value)
 
 }else{
 
